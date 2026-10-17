@@ -1,0 +1,2 @@
+// Only reports layout size to the embedding Wellspring component. No data or API calls.
+(()=>{let previous=0;const report=()=>{const height=Math.ceil(document.querySelector('main').getBoundingClientRect().height)+10;if(height!==previous){previous=height;window.parent.postMessage({type:'wellspring-simulation-size',height},window.location.origin);}};const observer=new ResizeObserver(report);observer.observe(document.querySelector('main'));window.addEventListener('load',report);window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});report();})();

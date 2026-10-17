@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {AlertCircle,ExternalLink,Loader2,RotateCcw} from 'lucide-react';
+export default function SimulationWorkspace({kind}:{kind:'flood'|'earthquake'}){
+ const frame=useRef<HTMLIFrameElement>(null);const [height,setHeight]=useState(1100),[loaded,setLoaded]=useState(false),[attempt,setAttempt]=useState(0);
+ const title=kind==='flood'?'Fictional flood preparedness simulation':'Fictional Senegal earthquake and water-infrastructure simulation';
+ const src='/simulations/'+kind+'.html';
+ useEffect(()=>{setLoaded(false);setHeight(1100);function resize(event:MessageEvent){if(event.origin!==window.location.origin||event.source!==frame.current?.contentWindow||event.data?.type!=='wellspring-simulation-size')return;const h=Number(event.data.height);if(Number.isFinite(h))setHeight(Math.min(14000,Math.max(500,h)));}window.addEventListener('message',resize);return()=>window.removeEventListener('message',resize);},[kind,attempt]);
+ return <section className="simulation-workspace"><div className="simulation-toolbar"><span className="badge amber">Fictional scenario · no predictions</span><div><button className="text-btn" onClick={()=>{setLoaded(false);setAttempt(x=>x+1)}}><RotateCcw size={14}/> Restart demo</button><a className="text-btn" href={src} target="_blank" rel="noreferrer">Open full screen <ExternalLink size={14}/></a></div></div><div className="simulation-intro"><AlertCircle size={17}/><p>Predefined examples for learning and specialist review. Exposure is not confirmed damage. No AI model, forecast, live alert or dispatch is involved.</p></div>{!loaded&&<div className="simulation-loading" role="status"><Loader2 size={18} className="spin"/> Loading the interactive scenario…</div>}<iframe ref={frame} key={kind+attempt} src={src} title={title} sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" onLoad={()=>setLoaded(true)} style={{height}} className="simulation-frame"/><p className="simulation-footnote">Scenario state resets when you restart or leave this component. Existing project, CRM and finance records are unaffected.</p></section>;
+}

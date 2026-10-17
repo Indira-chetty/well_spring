@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {seed} from '../app/domain.ts';
+import {generateReport,demoEvidence} from '../app/ai.ts';
+const s=seed();const params={id:'nepal',kind:'Donor update',language:'FR',model:'gemini-3.8-flash'};
+let captured;
+const fake=async(url,options)=>{captured={url,options};return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:'Voici les résultats vérifiés.'}]}}],usageMetadata:{totalTokenCount:123}})};
+const out=await generateReport('synthetic-test-key-123456',s,params,fake);
+assert.equal(out.text,'Voici les résultats vérifiés.');assert.equal(out.tokens,123);assert.equal(captured.options.headers['x-goog-api-key'],'synthetic-test-key-123456');
+const body=JSON.parse(captured.options.body);assert.match(body.contents[0].parts[0].text,/Canadian French/);assert.doesNotMatch(body.contents[0].parts[0].text,/Supporter|Aisha|synthetic-test-key/);
+assert.doesNotMatch(JSON.stringify(s),/synthetic-test-key/);
+await assert.rejects(()=>generateReport('',s,params,fake),/key/);
+await assert.rejects(()=>generateReport('synthetic-test-key-123456',s,{...params,id:'kijana'},fake),/Verify/);
+s.projects[1].results='A new identifying story';assert.throws(()=>demoEvidence(s,'nepal'),/unchanged/);s.projects[1].results=seed().projects[1].results;
+s.tools.find(t=>t.id==='a3').status='Paused';await assert.rejects(()=>generateReport('synthetic-test-key-123456',s,params,fake),/not active/);s.tools.find(t=>t.id==='a3').status='Pilot';
+await assert.rejects(()=>generateReport('synthetic-test-key-123456',s,params,async()=>new Response('',{status:429})),/quota/);
+await assert.rejects(()=>generateReport('synthetic-test-key-123456',s,params,async()=>Response.json({candidates:[{finishReason:'MAX_TOKENS'}]})),/complete draft/);
+console.log('Passed: provider request/response, French prompt, key isolation, synthetic-data restriction, paused-tool gate, missing key and quota handling. Provider responses were mocked; no live key is configured.');

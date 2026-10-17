@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {seed,mutate} from '../app/domain.ts';
+import {ensureCRM,mutateCRM,portability,canonical,fiveYearCost,systems,toSource,fromSource} from '../app/crm.ts';
+const s=ensureCRM(seed());assert.equal(s.supporters.length,5);ensureCRM(s);assert.equal(s.supporters.length,5);
+assert.equal(s.supporters.find(x=>x.id==='s1').consentVerified,false);
+assert.throws(()=>mutate(s,'reply',{id:'s1'},'Owner'),/consent/);
+assert.ok(portability(s).every(r=>r.passed&&r.count===5));
+const baseline=JSON.stringify(s.transactions),canon=JSON.stringify(canonical(s));
+for(const system of systems){mutateCRM(s,'crmSwitch',{system},'Owner');assert.equal(JSON.stringify(canonical(s)),canon);for(const row of canonical(s))assert.deepEqual(fromSource(system,toSource(system,row)),row);}
+assert.equal(JSON.stringify(s.transactions),baseline);
+assert.throws(()=>mutateCRM(s,'crmMerge',{source:'s-duplicate',target:'s1',note:''},'Owner'),/decision/);
+mutateCRM(s,'crmMerge',{source:'s-duplicate',target:'s1',note:'Reviewed fictional records for this exercise.'},'Owner');
+assert.equal(canonical(s).length,4);assert.equal(s.supporters.find(x=>x.id==='s1').amount,5000);assert.equal(s.supporters.find(x=>x.id==='s1').consent,false);assert.equal(s.supporters.find(x=>x.id==='s-duplicate').mergedInto,'s1');
+mutateCRM(s,'crmVerify',{id:'s1',note:'Reviewed fictional preference history.'},'Owner');assert.equal(s.supporters.find(x=>x.id==='s1').consent,false);assert.equal(s.supporters.find(x=>x.id==='s1').consentVerified,true);
+assert.throws(()=>mutate(s,'reply',{id:'s1'},'Owner'),/consent/);
+assert.equal(fiveYearCost({licence:0,hosting:'',support:0,migration:0,setup:0,training:0}),null);
+assert.equal(fiveYearCost({licence:0,hosting:10,support:20,migration:100,setup:50,training:25}),325);
+assert.throws(()=>mutateCRM(s,'crmCosts',{system:'Odoo',licence:-1},'Owner'),/non-negative/);
+mutateCRM(s,'crmTest',{},'Owner');assert.ok(s.crm.test.results.every(r=>r.passed&&r.count===4));
+mutateCRM(s,'crmDecision',{choice:'Continue evaluation',note:'Costs and contract evidence still needed.'},'Owner');assert.ok(s.crm.decision.evidence.connectorTest);assert.ok(s.activity.some(a=>a.title==='Supporter merge approved'));
+console.log('Passed: additive initialization, consent gates, four adapter mappings, finance preservation, conservative merge, archived source, cost calculation, validation and decision snapshots.');
