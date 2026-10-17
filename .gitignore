@@ -57,3 +57,8 @@ next-env.d.ts
 
 # Generated compiler cache
 *.tsbuildinfo
+
+# Local demo data and compiled assets
+/.wellspring-demo/
+/demo-dist/
+*.tsbuildinfo
